@@ -5,8 +5,8 @@
   "main": "dist/index.js",
   "scripts": {
     "build": "tsc",
-    "start": "prisma generate && node dist/app.js",
-    "deploy": "prisma migrate deploy && npm run build"
+    "start": "node dist/app.js",
+    "postinstall": "prisma generate"
   }
 ,
   "keywords": [],
