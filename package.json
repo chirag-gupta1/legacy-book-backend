@@ -6,9 +6,8 @@
   "scripts": {
     "build": "tsc",
     "start": "node dist/app.js",
-    "postinstall": "prisma generate"
-  }
-,
+    "deploy": "prisma generate && prisma migrate deploy && npm run build"
+  },
   "keywords": [],
   "author": "",
   "license": "ISC",
