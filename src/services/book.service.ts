@@ -1,8 +1,11 @@
 // src/services/book.service.ts
 import client from "./openai";
-import { Answer } from "@prisma/client";
+interface AnswerLike {
+  response: string;
+}
 
-export async function generateChapter(answers: Answer[]) {
+
+export async function generateChapter(answers: Answer[]): Promise<string> {
   const summary = answers
     .map(a =>
       `Q: ${a.question}\nA: ${a.response}\nFollow-up: ${a.followUp ?? "None"}`

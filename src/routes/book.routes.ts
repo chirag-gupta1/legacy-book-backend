@@ -45,7 +45,7 @@ router.get("/verify/:conversationId", async (req, res) => {
 
   const report = await verifyBookContent(
     bookText,
-    answers.map(a => a.response)
+    answers.map((a: { response: string }) => a.response)
   );
 
   res.json(report);
@@ -75,7 +75,7 @@ router.post("/regenerate/:conversationId", async (req, res) => {
 
   const regenerated = await regenerateBook({
     bookText: originalBook,
-    answers: answers.map(a => a.response),
+    answers: answers.map((a: { response: string }) => a.response),
     decisions,
   });
 
@@ -121,7 +121,7 @@ router.get("/verify/version/:versionId", async (req, res) => {
 
   const report = await verifyBookContent(
     version.content,
-    answers.map(a => a.response)
+    answers.map((a: { response: string }) => a.response)
   );
 
   res.json(report);

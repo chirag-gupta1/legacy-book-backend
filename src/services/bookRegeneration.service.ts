@@ -1,5 +1,9 @@
-import openai from "../lib/openai";
-import { VerificationDecision } from "@prisma/client";
+import openai from "./openai";
+interface DecisionLike {
+  issueId: string;
+  decision: "KEEP" | "REMOVE" | "ANONYMIZE";
+}
+
 
 interface RegenerationInput {
   bookText: string;
@@ -11,7 +15,11 @@ export async function regenerateBook({
   bookText,
   answers,
   decisions,
-}: RegenerationInput): Promise<string> {
+}: {
+  bookText: string;
+  answers: string[];
+  decisions: DecisionLike[];
+}): Promise<string> {
   const constraints = decisions.map(d => {
     if (d.decision === "REMOVE") {
       return `Remove content related to issue ${d.issueId}`;

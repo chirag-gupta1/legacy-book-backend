@@ -1,4 +1,4 @@
-import { PrismaClient } from "@prisma/client";
+const { PrismaClient } = require("@prisma/client");
 import { PrismaPg } from "@prisma/adapter-pg";   // <-- adapter package
 import pg from "pg";                             // <-- node-postgres
 import "dotenv/config";
