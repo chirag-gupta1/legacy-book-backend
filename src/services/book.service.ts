@@ -1,11 +1,13 @@
 // src/services/book.service.ts
 import client from "./openai";
 interface AnswerLike {
+  question: string;
   response: string;
+  followUp?: string | null;
 }
 
 
-export async function generateChapter(answers: Answer[]): Promise<string> {
+export async function generateChapter(answers: AnswerLike[]): Promise<string> {
   const summary = answers
     .map(a =>
       `Q: ${a.question}\nA: ${a.response}\nFollow-up: ${a.followUp ?? "None"}`
