@@ -4,10 +4,10 @@
   "description": "",
   "main": "dist/index.js",
   "scripts": {
-  "build": "tsc",
-  "start": "node dist/app.js",
-  "deploy": "prisma generate && prisma migrate deploy && npm run build"
-}
+    "build": "tsc",
+    "start": "prisma generate && node dist/app.js",
+    "deploy": "prisma migrate deploy && npm run build"
+  }
 ,
   "keywords": [],
   "author": "",
