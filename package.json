@@ -5,7 +5,7 @@
   "main": "dist/index.js",
   "scripts": {
     "build": "tsc",
-    "postinstall": "prisma generate",
+    "postinstall": "PRISMA_SKIP_POSTINSTALL_GENERATE=1 prisma generate",
     "start": "node dist/app.js"
   },
   "keywords": [],
