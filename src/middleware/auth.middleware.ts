@@ -29,11 +29,16 @@ export async function requireAuth(
   }
 
   const authHeader = req.headers.authorization;
-  if (!authHeader?.startsWith("Bearer ")) {
-    return res.status(401).json({ error: "Missing auth token" });
-  }
 
-  const token = authHeader.split(" ")[1];
+if (!authHeader || !authHeader.startsWith("Bearer ")) {
+  return res.status(401).json({ error: "Missing auth token" });
+}
+
+const token = authHeader.substring("Bearer ".length);
+
+if (!token) {
+  return res.status(401).json({ error: "Missing auth token" });
+}
 
   try {
     const decoded: any = jwt.decode(token, { complete: true });
