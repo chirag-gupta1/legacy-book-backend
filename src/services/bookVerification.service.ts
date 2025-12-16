@@ -1,3 +1,4 @@
+// src/services/bookVerification.service.ts
 import openai from "./openai";
 import crypto from "crypto";
 
@@ -6,17 +7,15 @@ function generateIssueId(type: string, message: string): string {
     .createHash("sha256")
     .update(`${type}:${message}`)
     .digest("hex")
-    .slice(0, 12); // short but stable
+    .slice(0, 12);
 }
 
-
 export interface VerificationIssue {
-  id: string; // 👈 NEW
+  id: string;
   type: "SENSITIVE" | "INTEGRITY" | "COVERAGE";
   message: string;
   severity: "LOW" | "MEDIUM" | "HIGH";
 }
-
 
 export interface VerificationReport {
   status: "PASS" | "WARN" | "FAIL";
@@ -27,21 +26,6 @@ export async function verifyBookContent(
   bookText: string,
   interviewAnswers: string[]
 ): Promise<VerificationReport> {
-  if (!process.env.OPENAI_API_KEY) {
-    return {
-      status: "WARN",
-            issues: [
-        {
-            id: "no-content",
-            type: "INTEGRITY",
-            message: "AI verifier returned no content",
-            severity: "LOW",
-        },
-        ],
-
-    };
-  }
-
   const prompt = `
 You are an AI verifier.
 
@@ -89,40 +73,40 @@ Interview Answers:
       status: "WARN",
       issues: [
         {
-            id: "no-content",
-            type: "INTEGRITY",
-            message: "AI verifier returned no content",
-            severity: "LOW",
+          id: "no-content",
+          type: "INTEGRITY",
+          message: "AI verifier returned no content",
+          severity: "LOW",
         },
-        ],
-
+      ],
     };
   }
 
-  let parsed: VerificationReport;
+  let parsed: Partial<VerificationReport>;
 
-try {
-  parsed = JSON.parse(content) as VerificationReport;
-} catch {
+  try {
+    parsed = JSON.parse(content);
+  } catch {
+    return {
+      status: "FAIL",
+      issues: [
+        {
+          id: "invalid-json",
+          type: "INTEGRITY",
+          message: "AI verifier returned invalid JSON",
+          severity: "HIGH",
+        },
+      ],
+    };
+  }
+
+  const issues = (parsed.issues ?? []).map(issue => ({
+    ...issue,
+    id: generateIssueId(issue.type, issue.message),
+  }));
+
   return {
-    status: "FAIL",
-    issues: [
-      {
-        id: "invalid-json",
-        type: "INTEGRITY",
-        message: "AI verifier returned invalid JSON",
-        severity: "HIGH",
-      },
-    ],
+    status: parsed.status ?? "WARN",
+    issues,
   };
-}
-
-// Attach stable IDs
-parsed.issues = parsed.issues.map(issue => ({
-  ...issue,
-  id: generateIssueId(issue.type, issue.message),
-}));
-
-return parsed;
-
 }

@@ -1,22 +1,47 @@
 // src/services/book.service.ts
 import client from "./openai";
-interface AnswerLike {
-  question: string;
+
+export interface AnswerLike {
+  question?: string;
   response: string;
   followUp?: string | null;
 }
 
+/**
+ * Generates a biography-style chapter from interview answers.
+ *
+ * Accepts:
+ * - Full AnswerLike[] (question + response + followUp)
+ * - OR minimal objects with just { response }
+ *
+ * This keeps routes flexible and avoids DB coupling.
+ */
+export async function generateChapter(
+  answers: AnswerLike[]
+): Promise<string> {
+  if (!answers.length) {
+    return "";
+  }
 
-export async function generateChapter(answers: AnswerLike[]): Promise<string> {
   const summary = answers
-    .map(a =>
-      `Q: ${a.question}\nA: ${a.response}\nFollow-up: ${a.followUp ?? "None"}`
-    )
+    .map((a, index) => {
+      const questionPart = a.question
+        ? `Q: ${a.question}\n`
+        : `Q${index + 1}:\n`;
+
+      const followUpPart =
+        a.followUp !== undefined
+          ? `\nFollow-up: ${a.followUp ?? "None"}`
+          : "";
+
+      return `${questionPart}A: ${a.response}${followUpPart}`;
+    })
     .join("\n\n");
 
   const prompt = `
-Write a 6-10 page biography-style chapter based on these interview notes:
+Write a 6–10 page biography-style chapter based on these interview notes.
 
+Interview notes:
 ${summary}
 
 Tone guidelines:
@@ -25,7 +50,10 @@ Tone guidelines:
 - Reflective
 - Professional biography style
 
-Return plain text only.
+Rules:
+- Do NOT invent facts
+- Do NOT add information not present in the notes
+- Return plain text only
 `;
 
   const completion = await client.chat.completions.create({
@@ -34,8 +62,5 @@ Return plain text only.
     max_tokens: 3000,
   });
 
-  const choice = completion.choices?.[0];
-  const message = choice?.message?.content;
-
-  return message ?? ""; // if undefined, return safe empty string
+  return completion.choices?.[0]?.message?.content ?? "";
 }

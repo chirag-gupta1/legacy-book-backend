@@ -1,10 +1,14 @@
 // src/routes/interview.routes.ts
 import { Router } from "express";
+import prisma from "../lib/prisma";
+import { requireAuth } from "../middleware/auth.middleware";
 import { getNextQuestion } from "../services/conversation.service";
 import { analyzeAnswerWithAI } from "../services/aiAnalysis.service";
-import prisma from "../lib/prisma";
 
 const router = Router();
+
+// 🔐 Protect all interview routes
+router.use(requireAuth);
 
 /**
  * GET next interview question
@@ -16,8 +20,11 @@ router.get("/question/:conversationId", async (req, res) => {
     return res.status(400).json({ error: "conversationId is required" });
   }
 
-  const conversation = await prisma.conversation.findUnique({
-    where: { id: conversationId },
+  const conversation = await prisma.conversation.findFirst({
+    where: {
+      id: conversationId,
+      userId: req.user!.id,
+    },
     include: { answers: true },
   });
 
@@ -48,8 +55,11 @@ router.post("/answer/:conversationId", async (req, res) => {
     return res.status(400).json({ error: "Response is required" });
   }
 
-  const conversation = await prisma.conversation.findUnique({
-    where: { id: conversationId },
+  const conversation = await prisma.conversation.findFirst({
+    where: {
+      id: conversationId,
+      userId: req.user!.id,
+    },
     include: { answers: true },
   });
 
@@ -66,10 +76,10 @@ router.post("/answer/:conversationId", async (req, res) => {
     return res.json({ message: "Interview complete" });
   }
 
-  // AI analysis
+  // 🤖 AI analysis
   const analysis = await analyzeAnswerWithAI(currentQuestion, response);
 
-  // Save answer
+  // 💾 Save answer
   const created = await prisma.answer.create({
     data: {
       conversationId: conversation.id,
@@ -81,10 +91,15 @@ router.post("/answer/:conversationId", async (req, res) => {
     },
   });
 
-  // Advance conversation index
+  // ➕ Advance conversation index (only for this user's conversation)
   await prisma.conversation.update({
-    where: { id: conversation.id },
-    data: { questionIndex: conversation.questionIndex + 1 },
+    where: {
+      id: conversation.id,
+      userId: req.user!.id,
+    },
+    data: {
+      questionIndex: conversation.questionIndex + 1,
+    },
   });
 
   return res.json({
