@@ -1,11 +1,6 @@
-console.log("ENV KEYS:", Object.keys(process.env));
-console.log("DATABASE_URL at runtime:", process.env.DATABASE_URL);
-
 import express from "express";
 import cors from "cors";
 import interviewRoutes from "./routes/interview.routes";
-import dotenv from "dotenv";
-dotenv.config();
 
 
 const app = express();

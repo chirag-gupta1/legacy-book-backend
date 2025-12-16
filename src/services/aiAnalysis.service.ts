@@ -1,6 +1,5 @@
 // src/services/aiAnalysis.service.ts
 import OpenAI from "openai";
-import "dotenv/config";
 
 const OPENAI_KEY = process.env.OPENAI_API_KEY ?? "";
 let client: OpenAI | null = null;

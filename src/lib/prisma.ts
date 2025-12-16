@@ -1,5 +1,3 @@
-console.log("DATABASE_URL at runtime:", process.env.DATABASE_URL);
-
 const { PrismaClient } = require("@prisma/client");
 import { PrismaPg } from "@prisma/adapter-pg";   // <-- adapter package
 import pg from "pg";                             // <-- node-postgres
