@@ -1,6 +1,5 @@
-// src/middleware/auth.middleware.ts
 import { Request, Response, NextFunction } from "express";
-import jwt from "jsonwebtoken";
+import jwt, { JwtHeader, JwtPayload } from "jsonwebtoken";
 import jwksClient from "jwks-rsa";
 
 export interface AuthenticatedRequest extends Request {
@@ -10,52 +9,54 @@ export interface AuthenticatedRequest extends Request {
 }
 
 const client = jwksClient({
-  jwksUri: process.env.CLERK_JWKS_URL || "",
+  jwksUri: process.env.CLERK_JWKS_URL!,
 });
 
-export async function requireAuth(
+function getKey(header: JwtHeader, callback: any) {
+  client.getSigningKey(header.kid!, (err, key) => {
+    if (err) {
+      callback(err);
+      return;
+    }
+    const signingKey = key!.getPublicKey();
+    callback(null, signingKey);
+  });
+}
+
+export function requireAuth(
   req: AuthenticatedRequest,
   res: Response,
   next: NextFunction
 ) {
-  const ISSUER = process.env.CLERK_ISSUER;
-  const JWKS_URL = process.env.CLERK_JWKS_URL;
-
-  // ✅ Validate env vars at request-time, not import-time
-  if (!ISSUER || !JWKS_URL) {
-    return res
-      .status(500)
-      .json({ error: "Auth not configured on server" });
-  }
-
   const authHeader = req.headers.authorization;
 
-if (!authHeader || !authHeader.startsWith("Bearer ")) {
-  return res.status(401).json({ error: "Missing auth token" });
-}
-
-const token = authHeader.substring("Bearer ".length);
-
-if (!token) {
-  return res.status(401).json({ error: "Missing auth token" });
-}
-
-  try {
-    const decoded: any = jwt.decode(token, { complete: true });
-    if (!decoded?.header?.kid) {
-      return res.status(401).json({ error: "Invalid token" });
-    }
-
-    const key = await client.getSigningKey(decoded.header.kid);
-    const signingKey = key.getPublicKey();
-
-    const payload = jwt.verify(token, signingKey, {
-      issuer: ISSUER,
-    }) as any;
-
-    req.user = { id: payload.sub };
-    next();
-  } catch (err) {
-    return res.status(401).json({ error: "Unauthorized" });
+  if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    return res.status(401).json({ error: "Missing Authorization header" });
   }
+
+  const token = authHeader.replace("Bearer ", "");
+
+  jwt.verify(
+    token,
+    getKey,
+    {
+      algorithms: ["RS256"],
+      issuer: process.env.CLERK_ISSUER,
+    },
+    (err, decoded) => {
+      if (err || !decoded) {
+        console.error("JWT verification failed:", err);
+        return res.status(401).json({ error: "Invalid token" });
+      }
+
+      const payload = decoded as JwtPayload;
+
+      if (!payload.sub) {
+        return res.status(401).json({ error: "Invalid token payload" });
+      }
+
+      req.user = { id: payload.sub };
+      next();
+    }
+  );
 }
