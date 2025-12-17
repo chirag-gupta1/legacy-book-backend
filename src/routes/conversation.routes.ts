@@ -20,6 +20,7 @@ router.post("/start", async (req, res) => {
       title: title || "My Legacy Book",
       currentSection: "childhood",
       questionIndex: 0,
+      status: "active",
     },
   });
 
