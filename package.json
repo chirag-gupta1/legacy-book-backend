@@ -6,7 +6,7 @@
   "scripts": {
     "build": "tsc",
     "postinstall": "PRISMA_SKIP_POSTINSTALL_GENERATE=1 prisma generate",
-    "start": "node dist/app.js"
+    "start": "node dist/index.js"
   },
   "keywords": [],
   "author": "",
