@@ -1,11 +1,11 @@
-console.log("🚀 index.ts starting");
-
 import app from "./app";
 
-console.log("✅ app imported");
+const PORT = process.env.PORT;
 
-const PORT = process.env.PORT || 3000;
+if (!PORT) {
+  throw new Error("PORT not defined");
+}
 
 app.listen(PORT, () => {
-  console.log(`✅ Server running on port ${PORT}`);
+  console.log(`Server running on port ${PORT}`);
 });
