@@ -16,10 +16,6 @@ router.use(requireAuth);
 router.get("/question/:conversationId", async (req, res) => {
   const { conversationId } = req.params;
 
-  if (!conversationId) {
-    return res.status(400).json({ error: "conversationId is required" });
-  }
-
   const conversation = await prisma.conversation.findFirst({
     where: {
       id: conversationId,
@@ -32,17 +28,43 @@ router.get("/question/:conversationId", async (req, res) => {
     return res.status(404).json({ error: "Conversation not found" });
   }
 
-  const question = getNextQuestion({
+  const next = getNextQuestion({
     currentSection: conversation.currentSection as any,
     questionIndex: conversation.questionIndex,
   });
 
-  if (!question) {
+  // ✅ Interview finished
+  if (!next) {
     return res.json({ message: "Interview complete" });
   }
 
-  return res.json({ question });
+  // ✅ Persist section change if needed
+  if (
+    conversation.questionIndex >=
+    (require("../data/questions.data").LIFE_SECTIONS[
+      conversation.currentSection as any
+    ]?.length ?? 0)
+  ) {
+    const keys = Object.keys(
+      require("../data/questions.data").LIFE_SECTIONS
+    );
+    const currentIndex = keys.indexOf(conversation.currentSection);
+    const nextSection = keys[currentIndex + 1];
+
+    if (nextSection) {
+      await prisma.conversation.update({
+        where: { id: conversation.id },
+        data: {
+          currentSection: nextSection,
+          questionIndex: 0,
+        },
+      });
+    }
+  }
+
+  return res.json({ question: next });
 });
+
 
 /**
  * POST an answer for the conversation
