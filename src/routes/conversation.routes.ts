@@ -12,23 +12,12 @@ router.use(requireAuth);
  * Start a new conversation (biography project)
  */
 router.post("/start", async (req, res) => {
-  const clerkUserId = req.user!.id;
   const { title } = req.body;
-
-  // ✅ Ensure user exists
-  const user = await prisma.user.upsert({
-    where: { id: clerkUserId },
-    update: {},
-    create: {
-      id: clerkUserId,
-      email: req.user!.email, // make sure this exists in auth middleware
-      name: req.user!.name ?? "User",
-    },
-  });
+  const userId = req.user!.id;
 
   const conversation = await prisma.conversation.create({
     data: {
-      userId: user.id,
+      userId,
       title: title || "My Legacy Book",
       currentSection: "childhood",
       questionIndex: 0,
@@ -38,6 +27,5 @@ router.post("/start", async (req, res) => {
 
   res.status(201).json({ conversation });
 });
-
 
 export default router;

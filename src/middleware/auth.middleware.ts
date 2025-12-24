@@ -60,3 +60,5 @@ export function requireAuth(
     }
   );
 }
+console.log("AUTH USER:", clerkUserId);
+
