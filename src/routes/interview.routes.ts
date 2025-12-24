@@ -70,65 +70,101 @@ router.get("/question/:conversationId", async (req, res) => {
  * POST an answer for the conversation
  */
 router.post("/answer/:conversationId", async (req, res) => {
-  const { conversationId } = req.params;
-  const { response } = req.body;
+  try {
+    const { conversationId } = req.params;
+    const { response } = req.body;
 
-  if (!response) {
-    return res.status(400).json({ error: "Response is required" });
+    if (!response || typeof response !== "string") {
+      return res.status(400).json({ error: "Response is required" });
+    }
+
+    const conversation = await prisma.conversation.findFirst({
+      where: {
+        id: conversationId,
+        userId: req.user!.id,
+      },
+    });
+
+    if (!conversation) {
+      return res.status(404).json({ error: "Conversation not found" });
+    }
+
+    const currentQuestion = getNextQuestion({
+      currentSection: conversation.currentSection as any,
+      questionIndex: conversation.questionIndex,
+    });
+
+    if (!currentQuestion) {
+      return res.json({ message: "Interview complete" });
+    }
+
+    // 🧠 AI analysis (SAFE)
+    let importanceScore: number | null = null;
+    let tags: string[] | null = null;
+    let followUpQuestion: string | null = null;
+
+    const MIN_LENGTH_FOR_AI = 12;
+
+    if (response.trim().length >= MIN_LENGTH_FOR_AI) {
+      try {
+        const analysis = await analyzeAnswerWithAI(
+          currentQuestion,
+          response
+        );
+
+        importanceScore = analysis?.importanceScore ?? null;
+        tags = analysis?.tags ?? null;
+        followUpQuestion =
+          typeof analysis?.followUpQuestion === "string" &&
+          analysis.followUpQuestion.trim()
+            ? analysis.followUpQuestion
+            : null;
+      } catch (err) {
+        console.error("AI analysis failed", {
+          conversationId,
+          currentQuestion,
+          response,
+          err,
+        });
+        // fail soft: proceed without AI data
+      }
+    }
+
+    // 💾 Save answer ALWAYS
+    const created = await prisma.answer.create({
+      data: {
+        conversationId: conversation.id,
+        question: currentQuestion,
+        response,
+        importanceScore,
+        tags,
+        followUp: followUpQuestion,
+      },
+    });
+
+    // ➕ Advance conversation index
+    await prisma.conversation.update({
+      where: {
+        id: conversation.id,
+        userId: req.user!.id,
+      },
+      data: {
+        questionIndex: conversation.questionIndex + 1,
+      },
+    });
+
+    return res.json({
+      message: "Answer saved",
+      followUpQuestion,
+      answer: created,
+    });
+  } catch (err) {
+    console.error("Interview answer route crashed", err);
+
+    return res.status(500).json({
+      error: "Could not save answer. Please try again.",
+    });
   }
-
-  const conversation = await prisma.conversation.findFirst({
-    where: {
-      id: conversationId,
-      userId: req.user!.id,
-    },
-    include: { answers: true },
-  });
-
-  if (!conversation) {
-    return res.status(404).json({ error: "Conversation not found" });
-  }
-
-  const currentQuestion = getNextQuestion({
-    currentSection: conversation.currentSection as any,
-    questionIndex: conversation.questionIndex,
-  });
-
-  if (!currentQuestion) {
-    return res.json({ message: "Interview complete" });
-  }
-
-  // 🤖 AI analysis
-  const analysis = await analyzeAnswerWithAI(currentQuestion, response);
-
-  // 💾 Save answer
-  const created = await prisma.answer.create({
-    data: {
-      conversationId: conversation.id,
-      question: currentQuestion,
-      response,
-      importanceScore: analysis.importanceScore,
-      tags: analysis.tags,
-      followUp: analysis.followUpQuestion ?? null,
-    },
-  });
-
-  // ➕ Advance conversation index (only for this user's conversation)
-  await prisma.conversation.update({
-    where: {
-      id: conversation.id,
-      userId: req.user!.id,
-    },
-    data: {
-      questionIndex: conversation.questionIndex + 1,
-    },
-  });
-
-  return res.json({
-    message: "Answer saved",
-    followUpQuestion: analysis.followUpQuestion || null,
-    answer: created,
-  });
 });
 
 export default router;
