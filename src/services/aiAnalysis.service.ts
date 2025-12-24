@@ -70,12 +70,22 @@ Rules:
 
   try {
     // Use the chat completions call and keep the response small
-    const resp = await client.chat.completions.create({
-      model: "gpt-4o-mini",
-      messages: [{ role: "user", content: systemPrompt }],
-      temperature: 0.35,
-      max_tokens: 200,
-    } as any);
+    const resp = await Promise.race([
+  client.chat.completions.create({
+    model: "gpt-4o-mini",
+    messages: [{ role: "user", content: systemPrompt }],
+    temperature: 0.35,
+    max_tokens: 200,
+  } as any),
+
+  new Promise((_, reject) =>
+    setTimeout(
+      () => reject(new Error("OpenAI timeout")),
+      8_000 // 8 seconds hard cap
+    )
+  ),
+]);
+
 
     // Safely extract textual content from many possible SDK shapes
     let rawText: string | undefined;
