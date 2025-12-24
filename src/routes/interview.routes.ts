@@ -14,56 +14,41 @@ router.use(requireAuth);
  * GET next interview question
  */
 router.get("/question/:conversationId", async (req, res) => {
-  const { conversationId } = req.params;
+  try {
+    const { conversationId } = req.params;
 
-  const conversation = await prisma.conversation.findFirst({
-    where: {
-      id: conversationId,
-      userId: req.user!.id,
-    },
-    include: { answers: true },
-  });
+    const conversation = await prisma.conversation.findFirst({
+      where: {
+        id: conversationId,
+        userId: req.user!.id,
+      },
+    });
 
-  if (!conversation) {
-    return res.status(404).json({ error: "Conversation not found" });
-  }
-
-  const next = getNextQuestion({
-    currentSection: conversation.currentSection as any,
-    questionIndex: conversation.questionIndex,
-  });
-
-  // ✅ Interview finished
-  if (!next) {
-    return res.json({ message: "Interview complete" });
-  }
-
-  // ✅ Persist section change if needed
-  if (
-    conversation.questionIndex >=
-    (require("../data/questions.data").LIFE_SECTIONS[
-      conversation.currentSection as any
-    ]?.length ?? 0)
-  ) {
-    const keys = Object.keys(
-      require("../data/questions.data").LIFE_SECTIONS
-    );
-    const currentIndex = keys.indexOf(conversation.currentSection);
-    const nextSection = keys[currentIndex + 1];
-
-    if (nextSection) {
-      await prisma.conversation.update({
-        where: { id: conversation.id },
-        data: {
-          currentSection: nextSection,
-          questionIndex: 0,
-        },
-      });
+    if (!conversation) {
+      return res.status(404).json({ error: "Conversation not found" });
     }
-  }
 
-  return res.json({ question: next });
+    const next = getNextQuestion({
+      currentSection: conversation.currentSection as any,
+      questionIndex: conversation.questionIndex,
+    });
+
+    // ✅ Interview finished
+    if (!next) {
+      return res.json({ message: "Interview complete" });
+    }
+
+    // ⚠️ DO NOT mutate section here
+    return res.json({ question: next });
+  } catch (err) {
+    console.error("GET /interview/question crashed", err);
+
+    return res.status(500).json({
+      error: "Could not load next question",
+    });
+  }
 });
+
 
 
 /**
