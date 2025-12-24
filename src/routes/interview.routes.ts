@@ -33,21 +33,17 @@ router.get("/question/:conversationId", async (req, res) => {
       questionIndex: conversation.questionIndex,
     });
 
-    // ✅ Interview finished
     if (!next) {
       return res.json({ message: "Interview complete" });
     }
 
-    // ⚠️ DO NOT mutate section here
     return res.json({ question: next });
   } catch (err) {
     console.error("GET /interview/question crashed", err);
-
-    return res.status(500).json({
-      error: "Could not load next question",
-    });
+    return res.status(500).json({ error: "Failed to load question" });
   }
 });
+
 
 
 
