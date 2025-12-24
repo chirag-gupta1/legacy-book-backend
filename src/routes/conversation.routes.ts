@@ -15,6 +15,17 @@ router.post("/start", async (req, res) => {
   const { title } = req.body;
   const userId = req.user!.id;
 
+   // ✅ ENSURE USER EXISTS
+  await prisma.user.upsert({
+    where: { id: userId },
+    update: {},
+    create: {
+      id: userId,
+      name: "Unknown",          // can be updated later
+      email: `${userId}@clerk`, // placeholder
+    },
+  });
+
   const conversation = await prisma.conversation.create({
     data: {
       userId,
