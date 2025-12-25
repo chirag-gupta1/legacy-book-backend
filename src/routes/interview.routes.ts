@@ -1,4 +1,3 @@
-// src/routes/interview.routes.ts
 import { Router } from "express";
 import prisma from "../lib/prisma";
 import { requireAuth } from "../middleware/auth.middleware";
@@ -33,6 +32,7 @@ router.get("/question/:conversationId", async (req, res) => {
       questionIndex: conversation.questionIndex,
     });
 
+    // ✅ Interview finished
     if (!next) {
       return res.json({ message: "Interview complete" });
     }
@@ -43,9 +43,6 @@ router.get("/question/:conversationId", async (req, res) => {
     return res.status(500).json({ error: "Failed to load question" });
   }
 });
-
-
-
 
 /**
  * POST an answer for the conversation
@@ -79,7 +76,7 @@ router.post("/answer/:conversationId", async (req, res) => {
       return res.json({ message: "Interview complete" });
     }
 
-    // 🧠 AI analysis (SAFE)
+    // 🧠 AI analysis (fail-soft)
     let importanceScore: number | null = null;
     let tags: string[] | null = null;
     let followUpQuestion: string | null = null;
@@ -107,11 +104,11 @@ router.post("/answer/:conversationId", async (req, res) => {
           response,
           err,
         });
-        // fail soft: proceed without AI data
+        // fail soft
       }
     }
 
-    // 💾 Save answer ALWAYS
+    // 💾 Save answer
     const created = await prisma.answer.create({
       data: {
         conversationId: conversation.id,
@@ -123,14 +120,61 @@ router.post("/answer/:conversationId", async (req, res) => {
       },
     });
 
-    // ➕ Advance conversation index
+    // ➕ Advance interview state (SECTION-SAFE)
+    const questionsData = require("../data/questions.data");
+    const sections: string[] = Object.keys(
+      questionsData.LIFE_SECTIONS
+    );
+
+    const currentSection = conversation.currentSection;
+
+    // 🔒 Improvement #1 — hard guard against corrupted section
+    if (!questionsData.LIFE_SECTIONS[currentSection]) {
+      console.error("Invalid interview section detected", {
+        conversationId,
+        currentSection,
+      });
+
+      return res.status(500).json({
+        error: "Interview state corrupted. Please restart.",
+      });
+    }
+
+    const sectionQuestions =
+      questionsData.LIFE_SECTIONS[currentSection] || [];
+
+    let nextQuestionIndex = conversation.questionIndex + 1;
+    let nextSection = currentSection;
+
+    // Move to next section if current is exhausted
+    if (nextQuestionIndex >= sectionQuestions.length) {
+      const currentSectionIndex = sections.indexOf(currentSection);
+      const followingSection = sections[currentSectionIndex + 1];
+
+      if (followingSection) {
+        nextSection = followingSection;
+        nextQuestionIndex = 0;
+      }
+    }
+
+    // 🔒 Improvement #2 — explicit end-of-interview handling
+    const isLastSection =
+      nextQuestionIndex >= sectionQuestions.length &&
+      !sections[sections.indexOf(currentSection) + 1];
+
+    if (isLastSection) {
+      nextQuestionIndex = Number.MAX_SAFE_INTEGER;
+    }
+
+    // Persist progression
     await prisma.conversation.update({
       where: {
         id: conversation.id,
         userId: req.user!.id,
       },
       data: {
-        questionIndex: conversation.questionIndex + 1,
+        currentSection: nextSection,
+        questionIndex: nextQuestionIndex,
       },
     });
 
