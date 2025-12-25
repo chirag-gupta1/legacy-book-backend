@@ -61,7 +61,7 @@ Interview Answers:
 `;
 
   const response = await openai.chat.completions.create({
-    model: "gpt-4o-mini",
+    model: "gpt-5.2-pro",
     messages: [{ role: "user", content: prompt }],
     temperature: 0,
   });

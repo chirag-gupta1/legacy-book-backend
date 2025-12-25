@@ -49,7 +49,7 @@ Return ONLY the regenerated biography text.
 `;
 
   const response = await openai.chat.completions.create({
-    model: "gpt-4o-mini",
+    model: "gpt-5.2",
     messages: [{ role: "user", content: prompt }],
     temperature: 0.2,
   });

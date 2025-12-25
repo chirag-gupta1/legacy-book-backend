@@ -72,7 +72,7 @@ Rules:
     // Use the chat completions call and keep the response small
     const resp = await Promise.race([
   client.chat.completions.create({
-    model: "gpt-4o-mini",
+    model: "gpt-5-mini",
     messages: [{ role: "user", content: systemPrompt }],
     temperature: 0.35,
     max_tokens: 200,
