@@ -1,10 +1,26 @@
 import app from "./app";
+import cors from "cors";
 
 const PORT = process.env.PORT;
 
 if (!PORT) {
   throw new Error("PORT not defined");
 }
+
+app.use(
+  cors({
+    origin: [
+      "http://localhost:3000",
+      "https://legacy-book.vercel.app", // future
+    ],
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+    credentials: true,
+  })
+);
+
+// IMPORTANT
+app.options("*", cors());
 
 const requiredEnv = [
   "DATABASE_URL",
