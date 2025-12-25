@@ -10,26 +10,25 @@ export interface ConversationLike {
 }
 
 /**
- * Returns the next question, automatically advancing through life sections.
+ * Pure function.
+ * Returns the next question for the given section + index.
+ * DOES NOT mutate state.
  */
-export function getNextQuestion(conversation: ConversationLike) {
+export function getNextQuestion(
+  conversation: ConversationLike
+): string | null {
   const sectionQuestions = LIFE_SECTIONS[conversation.currentSection];
 
-  // If questions left → return current
-  if (conversation.questionIndex < sectionQuestions.length) {
-    return sectionQuestions[conversation.questionIndex];
+  // Invalid section or no questions
+  if (!sectionQuestions) {
+    return null;
   }
 
-  // Move to the next section
-  const keys = Object.keys(LIFE_SECTIONS) as LifeSection[];
-  const currentIndex = keys.indexOf(conversation.currentSection);
-  const nextSection = keys[currentIndex + 1];
+  // If index is within this section, return the question
+  if (conversation.questionIndex < sectionQuestions.length) {
+    return sectionQuestions[conversation.questionIndex] ?? null;
+  }
 
-  if (!nextSection) return null;
-
-  conversation.currentSection = nextSection;
-  conversation.questionIndex = 0;
-
-  return LIFE_SECTIONS[nextSection][0];
+  // Out of range → interview complete (section transitions handled elsewhere)
+  return null;
 }
-
