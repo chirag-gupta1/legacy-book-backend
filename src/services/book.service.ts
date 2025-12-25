@@ -56,11 +56,28 @@ Rules:
 - Return plain text only
 `;
 
-  const completion = await client.chat.completions.create({
-    model: "gpt-4o",
-    messages: [{ role: "user", content: prompt }],
-    max_tokens: 3000,
-  });
+  try {
+    const completion = await client.chat.completions.create({
+      model: "gpt-4o",
+      messages: [{ role: "user", content: prompt }],
+      max_tokens: 3000,
+    });
 
-  return completion.choices?.[0]?.message?.content ?? "";
+    return completion.choices?.[0]?.message?.content ?? "";
+  } catch (err) {
+    // 🔒 FAIL-SOFT FALLBACK (DEV / NO-CREDITS SAFE)
+    console.error("generateChapter failed — using fallback", err);
+
+    return `
+[Draft generation unavailable]
+
+This draft could not be fully generated due to AI service unavailability.
+
+The following interview responses were recorded and will be used once generation is available:
+
+${answers.map((a, i) => `${i + 1}. ${a.response}`).join("\n")}
+
+(Full narrative generation will resume when AI access is restored.)
+`.trim();
+  }
 }
