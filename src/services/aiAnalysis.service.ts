@@ -75,7 +75,7 @@ Rules:
     model: "gpt-5-mini",
     messages: [{ role: "user", content: systemPrompt }],
     temperature: 0.35,
-    max_tokens: 200,
+    max_completion_tokens: 200,
   } as any),
 
   new Promise((_, reject) =>

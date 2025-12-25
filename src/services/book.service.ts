@@ -58,9 +58,9 @@ Rules:
 
   try {
     const completion = await client.chat.completions.create({
-      model: "gpt-4o",
+      model: "gpt-5.2",
       messages: [{ role: "user", content: prompt }],
-      max_tokens: 3000,
+      max_completion_tokens: 3000,
     });
 
     return completion.choices?.[0]?.message?.content ?? "";
