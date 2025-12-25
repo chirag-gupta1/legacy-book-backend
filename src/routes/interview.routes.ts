@@ -121,15 +121,38 @@ router.post("/answer/:conversationId", async (req, res) => {
     });
 
     // ➕ Advance interview — SINGLE SOURCE OF TRUTH
-    await prisma.conversation.update({
-      where: {
-        id: conversation.id,
-        userId: req.user!.id,
-      },
-      data: {
-        questionIndex: conversation.questionIndex + 1,
-      },
-    });
+    // ➕ Advance interview state (SECTION-AWARE)
+const { LIFE_SECTIONS } = require("../data/questions.data");
+const sections = Object.keys(LIFE_SECTIONS);
+
+const currentSection = conversation.currentSection;
+const currentQuestions = LIFE_SECTIONS[currentSection] || [];
+
+let nextQuestionIndex = conversation.questionIndex + 1;
+let nextSection = currentSection;
+
+// If we finished this section, move to the next one
+if (nextQuestionIndex >= currentQuestions.length) {
+  const currentSectionIndex = sections.indexOf(currentSection);
+  const followingSection = sections[currentSectionIndex + 1];
+
+  if (followingSection) {
+    nextSection = followingSection;
+    nextQuestionIndex = 0;
+  }
+}
+
+// Persist progression
+await prisma.conversation.update({
+  where: {
+    id: conversation.id,
+    userId: req.user!.id,
+  },
+  data: {
+    currentSection: nextSection,
+    questionIndex: nextQuestionIndex,
+  },
+});
 
     return res.json({
       message: "Answer saved",
